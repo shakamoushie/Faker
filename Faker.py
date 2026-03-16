@@ -8,10 +8,11 @@
 import streamlit as st
 import pandas as pd
 import random
-import shortuuid
+# import shortuuid
 import re
 from datetime import datetime as dt
 from datetime import timedelta
+import string
 
 # SCTN: variables:
 
@@ -620,6 +621,9 @@ font_name = "Verdana;"
 htmlstr = f"""<span style='font-family: {font_name}; font-size: 22pt; font-weight: bold'>Fake Dataset Generator (India)</span><br>"""
 htmlstr += "<br>" + separater_line
 
+ALPHABET = string.digits + string.ascii_uppercase
+BASE = len(ALPHABET)
+
 st.set_page_config(page_title = "Faker", page_icon='🎭', layout = "wide", initial_sidebar_state = "expanded")
 
 # SCTN: functions
@@ -630,6 +634,28 @@ def generate_unique_ids_shortuuid(count, length=8):
     new_id = shortuuid.uuid()[:length]  # Generate a short UUID and slice to the desired length
     unique_ids.add(new_id)
   return list(unique_ids)
+
+def to_base36(num): # Convert integer to base36 string.
+  if num == 0: return ALPHABET[0]
+
+  result = []
+  while num > 0:
+      num, rem = divmod(num, BASE)
+      result.append(ALPHABET[rem])
+
+  return ''.join(reversed(result))
+
+def generate_codes(recs_count): # Generate a unique scrambled code from index i.
+  CODE_LENGTH = 8
+  MAX = BASE ** CODE_LENGTH
+  PRIME = 15485863
+  
+  code_array = []
+  for i in range(recs_count):
+    scrambled = (i * PRIME) % MAX
+    code_array.append(to_base36(scrambled).zfill(CODE_LENGTH))
+
+  return code_array
 
 def CheckIfDateStrIsValid(date_str_to_check):
   try: 
@@ -991,7 +1017,8 @@ with scm2:
         if cat == 'Airline Names': gtdf[col_list[_]] = random.choices(AirlineNamesList, k=recs_count)
         if cat == 'Pet Types': gtdf[col_list[_]] = random.choices(PetCategoryList, k=recs_count)
         if cat == 'Bank Names': gtdf[col_list[_]] = random.choices(BankNamesList, k=recs_count)
-        if cat == 'ID': gtdf[col_list[_]] = generate_unique_ids_shortuuid(recs_count)     # 8 char + number
+        # if cat == 'ID': gtdf[col_list[_]] = generate_unique_ids_shortuuid(recs_count)     # 8 char + number
+        if cat == 'ID': gtdf[col_list[_]] = generate_codes(recs_count)     # 8 char + number
         if cat == 'Address': gtdf[col_list[_]] = GenerateStreetAddress(recs_count)
         if cat == 'Blank Field': gtdf[col_list[_]] = [''] * recs_count
         
