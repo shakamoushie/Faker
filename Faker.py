@@ -8,7 +8,6 @@
 import streamlit as st
 import pandas as pd
 import random
-# import shortuuid
 import re
 from datetime import datetime as dt
 from datetime import timedelta
@@ -40,7 +39,6 @@ FemaleFirstNamesList = ["Aadhira", "Aadhya", "Aadya", "Aahana", "Aanya", "Aaradh
                         "Sia", "Sitara", "Siya", "Sona", "Sony", "Suhana", "Swara", "Taara", "Tamia", "Tanvi", "Tanya", "Tara", "Taruni", "Tia", 
                         "Tiya", "Trisha", "Tula", "Tulsi", "Turvi", "Uma", "Vaani", "Vaanya", "Vamika", "Vanya", "Vara", "Varsha", "Veda", 
                         "Vedanshi", "Veena", "Vianca", "Vidya", "Viha", "Vrinda", "Yashika", "Yashvi", "Zara", "Ziana", "Ziva", "Zoya"]
-
 
 MaleFirstNamesList = ["Aadi", "Aadiv", "Aahan", "Aandaleeb", "Aarav", "Aarush", "Aaryan", "Abdul", "Abeer", "Abhay", "Abhinav", "Abhiram", 
                       "Adhiraj", "Aditya", "Advait", "Advay", "Advik", "Agastya", "Agilan", "Ahaan", "Ahmed", "Aija", "Ajay", "Ajit", "Akarsh", 
@@ -136,6 +134,9 @@ SurnamesList = ["Acharya", "Afreen", "Aftab", "Agarwal", "Ahluwalia", "Ahmed", "
 
 GenderList = ["Male", "Female"]
 
+ColoursList = ["Red", "Blue", "Green", "Yellow", "Orange", "Purple", "Pink", "Brown", "Black", "White", "Grey", "Magenta", "Cyan", "Teal", 
+               "Maroon", "Gold"]
+
 BankNamesList = ["State Bank of India", "Punjab National Bank", "Canara Bank", "Bank of Baroda", "Bank of India", 
                  "Union Bank of India", "Indian Bank", "Central Bank of India", "Indian Overseas Bank", 
                  "Bank of Maharashtra", "Punjab & Sind Bank", "UCO Bank","HDFC Bank", "ICICI Bank", "Axis Bank", 
@@ -176,7 +177,7 @@ CompanyNamesList = ["Synchrony International", "Aye Finance", "DHL Express", "IT
                     "Schneider Electric", "SMFG Credit Co. Ltd.", "Admiral Solutions", "Virtusa Consulting Services", 
                     "First Life Insurance", "National Engineering Industries", "LUCAS TVS", "Tata Communications"]
 
-ReligionNamesList = ['Hinduism', 'Muslim', 'Christian', 'Sikhi', 'Buddhist', 'Jain', 'Sufi', 'Atheists']
+ReligionNamesList = ['Hindu', 'Muslim', 'Christian', 'Sikh', 'Buddhist', 'Jain', 'Sufi', 'Atheist']
 EmailProvidersList = ["zohomail.com", "rediffmail.com", "gmail.com", "outlook.com", "hotmail.com", "yahoo.co.in"]
 
 DesignationNamesList = ["Chief Executive Officer", "Managing Director", "Chief Operating Officer", "Chief Financial Officer", 
@@ -621,19 +622,24 @@ font_name = "Verdana;"
 htmlstr = f"""<span style='font-family: {font_name}; font-size: 22pt; font-weight: bold'>Fake Dataset Generator (India)</span><br>"""
 htmlstr += "<br>" + separater_line
 
+merged_col_separator = {
+                        'HYPHEN': '-', 
+                        'DASH': '-', 
+                        'HYPHEN_SPACE': ' - ', 
+                        'DASH_SPACE': ' - ', 
+                        'SPACE': ' ',
+                        'PIPE': '|',
+                        'PIPE_SPACE': ' | ',
+                        'COLON': ':',
+                        'COLON_SPACE': ' : ',
+                        }
+
 ALPHABET = string.digits + string.ascii_uppercase
 BASE = len(ALPHABET)
 
 st.set_page_config(page_title = "Faker", page_icon='🎭', layout = "wide", initial_sidebar_state = "expanded")
 
 # SCTN: functions
-
-def generate_unique_ids_shortuuid(count, length=8):
-  unique_ids = set()
-  while len(unique_ids) < count:
-    new_id = shortuuid.uuid()[:length]  # Generate a short UUID and slice to the desired length
-    unique_ids.add(new_id)
-  return list(unique_ids)
 
 def to_base36(num): # Convert integer to base36 string.
   if num == 0: return ALPHABET[0]
@@ -679,14 +685,16 @@ def GetRandomNumber(start_end_str, recs_count):   # if one/both num limits are n
 
       if start_end_str == '': narr.append(random_number)
       else:
-        dt_lst = start_end_str.split(',')
-        dt_lst = [int(x.strip()) for x in dt_lst if x != '']
+        try:
+          dt_lst = start_end_str.split(',')
+          dt_lst = [int(x.strip()) for x in dt_lst if x != '']
 
-        if len(dt_lst) == 1: narr.append(random_number)
-        
-        elif len(dt_lst) == 2:  # both num limits provided
-          if is_integer_value(dt_lst[0]) and is_integer_value(dt_lst[1]): narr.append(random.randint(dt_lst[0], dt_lst[1])) 
-          else: narr.append(random_number)
+          if len(dt_lst) == 1: narr.append(random_number)
+          
+          elif len(dt_lst) == 2:  # both num limits provided
+            if is_integer_value(dt_lst[0]) and is_integer_value(dt_lst[1]): narr.append(random.randint(dt_lst[0], dt_lst[1])) 
+            else: narr.append(random_number)
+        except: narr = [0] * recs_count
 
   return narr
 
@@ -804,7 +812,7 @@ def Instructions():
   &nbsp;1. Click on <b>Manage Schema</b> to open, and either:<br>
   {six_spcs}◾ Create a new schema <b>OR</b><br>
   {six_spcs}◾ Upload a saved schema previously created and saved by this application. <b>OR</b><br>
-  {six_spcs}◾ Use a sample schema as a guideline.
+  {six_spcs}◾ Use a sample schema as a guideline to build your own schema.
   </span>
   </details>
 
@@ -812,33 +820,50 @@ def Instructions():
   <summary>{sctn_fmt}Step 2a: Schema Detail:</span><br></summary>
   <ol>
   <li>Choose a field category for each field you want in your dataset.</li>
-  <li>Give a field name to each new field. The provided field name must not be duplicate, or have spaces or special characters.</li>
-  <li>Scema related errors will be displayed on the right pane.</li>
+  <li>Give a field name to each new field. The provided field name must not be duplicate, or have spaces or special characters. 
+  Separate words in a field name can be connected by an underscore: Eg. First_Name.</li>
+  <li>Scema related errors will be displayed on the right pane, except for Combine field errors, which are displayed later.</li>
   <li>The schema, if new, can be downloaded as a .CSV file for future repeated use. To do this, move the mouse pointer to the top right of the 
   schema table widget to get the option to download the schema.</li></ol>
   </span>
   </details>
 
+  
   <details>
   <summary>{sctn_fmt}Step 2b: Fields:</span><br></summary>
   {three_spcs}The field categories are as follows:<br>
-  {three_spcs}◾ <i>Sr.</i> - A serial number column.<br>
-  {three_spcs}◾ <i>ID</i> - An 8-character random code.<br>
-  {three_spcs}◾ <i>Title</i> - A courtesy fe/male salutation.<br>
-  {three_spcs}◾ <i>First Name</i> - A fe/male name.<br>
-  {three_spcs}◾ <i>Surname</i> - A last name.<br>
-  {three_spcs}◾ <i>Full Name</i> - A first + last name (fe/male).<br>
-  {three_spcs}◾ <i>Blank Field</i> - An empty values column.<br>
-  {three_spcs}◾ <i>Email</i> - Email address.<br>
-  {three_spcs}◾ <i>Address</i> - Street address.<br>
-  {three_spcs}◾ <i>Gender</i> - Fe/Male values column.<br>
-  {three_spcs}◾ <i>Department Names</i> - department names.<br>
-  {three_spcs}◾ <i>Company Names</i> - company names.<br>
-  {three_spcs}◾ <i>Religion</i> - religion column.<br>
-  {three_spcs}◾ <i>Languages</i> - limits, if required, can be start and end dates in DD/MM/YYYY formatcolumn.<br>
-  {three_spcs}◾ <i>Numbers</i> - limits, if required, can be start and end integers.<br>
-  {three_spcs}◾ <i>List Options</i> - Custom List column. Limits, if required, can contain comma separated values (min:2).<br>
-  {three_spcs}◾ <i>Bank Names</i> - bank names column.<br>
+  {three_spcs}◾ <i>Sr.</i> - serial number.<br>
+  {three_spcs}◾ <i>ID</i> - 8-character random code.<br>
+  {three_spcs}◾ <i>Title</i>.<br>
+  {three_spcs}◾ <i>First Name</i> - A fe/male first name.<br>
+  {three_spcs}◾ <i>Surname</i>.<br>
+  {three_spcs}◾ <i>Full Name</i>.<br>
+  {three_spcs}◾ <i>Email</i>.<br>
+  {three_spcs}◾ <i>Address</i> - street address.<br>
+  {three_spcs}◾ <i>State</i>.<br>
+  {three_spcs}◾ <i>City</i>.<br>
+  {three_spcs}◾ <i>Pin</i> - pin code.<br>
+  {three_spcs}◾ <i>Gender</i>.<br>
+  {three_spcs}◾ <i>Companies</i>.<br>
+  {three_spcs}◾ <i>Departments</i>.<br>
+  {three_spcs}◾ <i>Designation</i>.<br>
+  {three_spcs}◾ <i>Religion</i>.<br>
+  {three_spcs}◾ <i>Languages</i>.<br>
+  {three_spcs}◾ <i>Dates</i> - limits, if required, can be start and end dates in DD/MM/YYYY format. Eg. <i>28-05-1991, 17-06,1992</i>.<br>
+  {three_spcs}◾ <i>Numbers</i> - limits, if required, can be start and end integers. Eg. <i>25, 50</i><br>
+  {three_spcs}◾ <i>List Options</i> - Create a custom column. Limits, if required, can contain comma separated values (min:2).
+  Eg. You can use List Options to include columns with such values: <i>Yes, No, Maybe</i> OR <i>True, False</i> OR <i>0, 1</i> OR 
+  <i>Male, Female, Unspecified</i> etc...<br>
+  {three_spcs}◾ <i>Colours</i>.<br>
+  {three_spcs}◾ <i>Banks</i>.<br>
+  {three_spcs}◾ <i>Combine</i> - Combine 2/more <u>existing</u> dataset columns. 
+  The Limits format must be: <i>separator, column_name_a, column_name_b</i>...<br>
+  The separator can be either: <i>hyphen, hyphen_space, dash, dash_space, space, pipe, pipe_space, colon, colon_space</i>. 
+  Eg. <i>hyphen_space, City, Pin</i> will result in <i>Mumbai - 400001</i>.<br>
+  {three_spcs}◾ <i>Airlines</i>.<br>
+  {three_spcs}◾ <i>Pet Types</i>.<br>
+  {three_spcs}◾ <i>Colours</i>.<br>
+  {three_spcs}◾ <i>Fixed Value</i> - Add a common value / blank in the Limits column.<br>
   </span><br>
   </details>
 
@@ -848,7 +873,7 @@ def Instructions():
   <li>Choose the number of records to generate.</li>
   <li>Generated records can be downloaded as a .CSV file - to do this, move the mouse pointer to the top right of the generated 
   dataset table widget to get the option to download the data.</li>
-  <li>Data has been localized for India.</li>
+  <li>Data has coherence and has been localized for India.</li>
   </span>
   </details>
   """
@@ -896,6 +921,20 @@ def ValidateListOptions(lst_str_to_chk):
 
   return oplst
 
+def ProcessCombinedFields(combine_col_array, gtdf): # {'TargetCol': col_list[_], 'Separator': lmts[0], 'SourceCols': lmts[1:]}
+  for ele in combine_col_array:
+    TargetCol = ele['TargetCol']
+    Separator = merged_col_separator[ele['Separator'].upper()]
+    SourceCols = ele['SourceCols']
+
+    SourceCols = [list(gtdf[x]) for x in SourceCols]
+    for lst in SourceCols:
+      if all(isinstance(element, int) for element in lst): lst[:] = list(map(str, lst))
+
+    gtdf[TargetCol] = [Separator.join(elements) for elements in zip(*SourceCols)]
+
+  return gtdf
+
 # SCTN: Main code
 
 st.html("""
@@ -913,8 +952,8 @@ st.html(htmlstr)
 
 cfg = {}
 col_type_dd = ['Sr.', 'ID', 'Title', 'First Name', 'Surname', 'Full Name', 'Email', 'Address', 'Gender', 'State', 'City', 'Pin', 
-               'Company Names', 'Department Names', 'Designations', 'Religion', 'Languages', 'Dates', 'Numbers', 'List Options', 
-               'Airline Names', 'Pet Types', 'Blank Field', 'Bank Names']
+               'Companies', 'Departments', 'Designations', 'Religion', 'Languages', 'Dates', 'Numbers', 'List Options', 
+               'Airlines', 'Pet Types', 'Colours', 'Fixed Value', 'Banks', 'Combine']
 
 cfg['Category'] = st.column_config.SelectboxColumn(label='Category', 
                                                     default='', 
@@ -944,6 +983,16 @@ with scm1:
     if create_load_schema == 'Create Schema':
       stdf = pd.DataFrame(columns=['Category', 'Column_Name', 'Limits'])
 
+      # TODO: to del - 
+      # sdict = {'Category': ['Fixed Value', 'Fixed Value', 'Combine'], 
+      #          'Column_Name': ['SCode', 'TmoCode', 'Merged'], 
+      #          'Limits': ['sku','xyz', 'hyphen, SCode, TmoCode'] }
+      # sdict = {'Category': ['Fixed Value', 'Numbers', 'Combine'], 
+      #          'Column_Name': ['SCode', 'Num', 'Merged'], 
+      #          'Limits': ['sku','1,10', 'hyphen_space, SCode, Num'] }
+      # stdf = pd.DataFrame(sdict)
+
+
     elif create_load_schema == 'Load Schema':
       uploaded_file = st.file_uploader('', type=['csv'], accept_multiple_files = False, label_visibility='collapsed')
       if uploaded_file is not None: 
@@ -953,17 +1002,103 @@ with scm1:
 
     elif create_load_schema == 'Sample Schema':
       sdict = {
-                'Category': ['Sr.', 'ID', 'Title', 'First Name', 'Surname', 'Full Name', 'Email', 'Address', 'Gender', 'State', 'City', 'Pin', 
-                            'Company Names', 'Department Names', 'Designations', 'Religion', 'Languages', 'Dates', 'Dates', 'Numbers', 
-                            'List Options', 'List Options', 'List Options', 'Airline Names', 'Pet Types', 'Blank Field', 'Bank Names'],
+                'Category': ['Sr.', 
+                             'ID', 
+                             'Title', 
+                             'First Name', 
+                             'Surname',
+                             'Full Name', 
+                             'Email', 
+                             'Address', 
+                             'Gender', 
+                             'State', 
+                             'City', 
+                             'Pin', 
+                             'Companies', 
+                             'Departments', 
+                             'Designations', 
+                             'Religion', 
+                             'Languages', 
+                             'Dates', 
+                             'Dates', 
+                             'Numbers', 
+                             'List Options', 
+                             'List Options', 
+                             'List Options', 
+                             'Airlines', 
+                             'Pet Types', 
+                             'Fixed Value', 
+                             'Fixed Value', 
+                             'Numbers', 
+                             'Combine',
+                             'Colours', 
+                             'Banks'],
 
-                'Column_Name': ['Sr', 'ID', 'Title', 'FirstName', 'Surname', 'FullName', 'Email', 'Address', 'Gender', 'State', 'City', 'Pin', 
-                                'CompanyNames', 'DepartmentNames', 'Designations', 'Religion', 'Languages', 'BornOn', 'VisitedOn', 'Numbers',
-                                'Boolean', 'TrueFalse', 'YNM', 'AirlineNames', 'PetTypes', 'BlankField', 'BankNames'],
+                'Column_Name': ['Sr', 
+                                'ID', 
+                                'Title', 
+                                'FirstName', 
+                                'Surname', 
+                                'FullName', 
+                                'Email', 
+                                'Address', 
+                                'Gender', 
+                                'State', 
+                                'City', 
+                                'Pin', 
+                                'CompanyNames', 
+                                'DepartmentNames', 
+                                'Designations', 
+                                'Religion', 
+                                'Languages', 
+                                'BornOn', 
+                                'VisitedOn', 
+                                'Numbers',
+                                'Boolean', 
+                                'TrueFalse', 
+                                'YNM', 
+                                'AirlineNames', 
+                                'PetTypes', 
+                                'BlankField', 
+                                'FixedValue', 
+                                'CodePostFix',
+                                'MergedCode',
+                                'Colours', 
+                                'BankNames'],
 
-                'Limits': ['','', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '','01-04-2023, 31-03-2024', '1276,5421', '0,1', 
-                          'True, False', 'Yes, No, Maybe', '', '', '', '']
+                'Limits': ['',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '',
+                           '01-04-2023, 31-03-2024',
+                           '1276, 5421',
+                           '0, 1',
+                           'True, False',
+                           'Yes, No, Maybe',
+                           '',
+                           '',
+                           '',
+                           'SKU',
+                           '',
+                           'hyphen, FixedValue, CodePostFix',
+                           '',
+                           '']
               }
+      
       stdf = pd.DataFrame(sdict)
 
   st.write(":blue[Schema Detail:]")
@@ -979,8 +1114,8 @@ with scm2:
     if (sdf['Column_Name'].str.contains(repattern, regex=True, na=False).any()): vis_error, verrormsg = True, verrormsg + '✋ Column Names cannot have special characters.<br>'
   
     uniq_cols = ['Sr.', 'Title', 'First Name', 'Surname', 'Full Name', 'Email', 'Address', 'Gender', 'State', 'City', 'Pin', 
-                 'Company Names', 'Department Names', 'Designations', 'Religion', 'Languages', 'Airline Names', 'Pet Types', 
-                 'Bank Names']  # these columns can be twice within the same schema
+                 'Companies', 'Departments', 'Designations', 'Religion', 'Languages', 'Airlines', 'Pet Types', 
+                 'Banks']  # these columns can be twice within the same schema
     
     for col_nme in uniq_cols:
       if int(sdf['Category'].value_counts().get(col_nme, 0)) > 1: vis_error, verrormsg = True, verrormsg + f'✋ There cannot be more than 1 {col_nme} Column.<br>'
@@ -990,7 +1125,7 @@ with scm2:
   if not vis_error:
     rc1, rc2 = st.columns(2)
     rc1.write('')
-    recs_count = rc2.number_input(label="Number of records to generate:", value=100, format='%d', icon=None, width="stretch")
+    recs_count = rc2.number_input(label="Number of records to generate:", value=10, format='%d', icon=None, width="stretch")
     rc1.subheader(":blue[Generated Dataset:]")
 
     if recs_count > 1:
@@ -1007,21 +1142,37 @@ with scm2:
       state_lst, city_lst, pin_lst = GenerateCityStatePin(recs_count, cat_lst)  # get State, City & Pin on basis of city
       title_lst, gender_lst, firstname_lst, surname_lst, fullname_lst, email_lst = GenerateNameRelatedComponents(recs_count, cat_lst)
 
+      combine_col_array = []
       for _, cat in enumerate(cat_lst):
         if cat == 'Sr.': gtdf[col_list[_]] = [x+1 for x in range(recs_count)]
-        if cat == 'Company Names': gtdf[col_list[_]] = random.choices(CompanyNamesList, k=recs_count)
+        if cat == 'Companies': gtdf[col_list[_]] = random.choices(CompanyNamesList, k=recs_count)
         if cat == 'Religion': gtdf[col_list[_]] = random.choices(ReligionNamesList, k=recs_count)
         if cat == 'Designations': gtdf[col_list[_]] = random.choices(DesignationNamesList, k=recs_count)
-        if cat == 'Department Names': gtdf[col_list[_]] = random.choices(DepartmentNamesList, k=recs_count)
+        if cat == 'Departments': gtdf[col_list[_]] = random.choices(DepartmentNamesList, k=recs_count)
         if cat == 'Languages': gtdf[col_list[_]] = random.choices(LanguageNamesList, k=recs_count)
-        if cat == 'Airline Names': gtdf[col_list[_]] = random.choices(AirlineNamesList, k=recs_count)
+        if cat == 'Airlines': gtdf[col_list[_]] = random.choices(AirlineNamesList, k=recs_count)
         if cat == 'Pet Types': gtdf[col_list[_]] = random.choices(PetCategoryList, k=recs_count)
-        if cat == 'Bank Names': gtdf[col_list[_]] = random.choices(BankNamesList, k=recs_count)
-        # if cat == 'ID': gtdf[col_list[_]] = generate_unique_ids_shortuuid(recs_count)     # 8 char + number
+        if cat == 'Banks': gtdf[col_list[_]] = random.choices(BankNamesList, k=recs_count)
         if cat == 'ID': gtdf[col_list[_]] = generate_codes(recs_count)     # 8 char + number
         if cat == 'Address': gtdf[col_list[_]] = GenerateStreetAddress(recs_count)
-        if cat == 'Blank Field': gtdf[col_list[_]] = [''] * recs_count
+        if cat == 'Fixed Value': gtdf[col_list[_]] = ([''] if limits_list[_] == '' else [limits_list[_].strip()]) * recs_count
+        if cat == 'Colours': gtdf[col_list[_]] = random.choices(ColoursList, k=recs_count)
         
+        if cat == 'Combine': 
+          lmts = limits_list[_].strip()
+          lerr, lmsg = False, ''
+          if lmts == '': lerr, lmsg = True, f'No / Invalid Limits provided for {col_list[_]}.'  # no limits provided / invalid limits format 
+          lmts = lmts.split(',')
+          lmts = [x.strip() for x in lmts]
+          if len(lmts) <= 2: 
+            lerr = True
+            lmsg += f'Insufficient Limit parameters provided for {col_list[_]}.'
+          if lmts[0].upper() not in merged_col_separator.keys(): 
+            lerr = True
+            lmsg += f'The first Limit parameter can only be {merged_col_separator.keys()} {col_list[_]}..'
+          if not lerr: combine_col_array.append({'TargetCol': col_list[_], 'Separator': lmts[0], 'SourceCols': lmts[1:]})
+          if lmsg != '': st.toast('✋ ' + lmsg)
+          
         if cat == 'State': gtdf[col_list[_]] = state_lst
         if cat == 'City': gtdf[col_list[_]] = city_lst
         if cat == 'Pin': gtdf[col_list[_]] = pin_lst
@@ -1045,11 +1196,8 @@ with scm2:
           gtdf[col_list[_]] = GetRandomNumber(limits_list[_], recs_count)
           gtdf[col_list[_]] = gtdf[col_list[_]].astype(int)
 
-        if cat == 'Pin':
-          gtdf[col_list[_]] = GetRandomNumber('110001, 855117', recs_count)
-          gtdf[col_list[_]] = gtdf[col_list[_]].astype(int)
-
       msg.toast("Dataset complete...", icon=":material/check_box:")
+      if len(combine_col_array) > 0: gtdf = ProcessCombinedFields(combine_col_array, gtdf)
       if gtdf.shape[0] > 0: st.dataframe(gtdf, hide_index=True, height=463)
 
   else: st.html("<span style='color: red; font-size:18px;'>Errors:</span><br>" + verrormsg)
