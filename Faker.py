@@ -6,12 +6,15 @@
 
 # Imports
 import streamlit as st
+from streamlit import session_state as ss
 import pandas as pd
 import random
 import re
 from datetime import datetime as dt
 from datetime import timedelta
 import string
+import base64
+import time as tm
 
 # SCTN: variables:
 
@@ -637,6 +640,8 @@ merged_col_separator = {
 ALPHABET = string.digits + string.ascii_uppercase
 BASE = len(ALPHABET)
 
+if "splash_screen_loaded" not in ss: ss.splash_screen_loaded = False
+
 st.set_page_config(page_title = "Faker", page_icon='🎭', layout = "wide", initial_sidebar_state = "expanded")
 
 # SCTN: functions
@@ -935,6 +940,24 @@ def ProcessCombinedFields(combine_col_array, gtdf): # {'TargetCol': col_list[_],
 
   return gtdf
 
+def splash_screen():
+  bkgrnd_img = f"./splash.jpg"
+  img_code = f"""<style>
+                      .stApp {{
+                          background: url(data:image/jpg;base64,{base64.b64encode(open(bkgrnd_img, 'rb').read()).decode()});
+                          margin-top: 0px;
+                          margin-left: 0px;
+                          background-size: cover;
+                          background-size: 100% 100%;
+                      }}
+                   </style>"""
+  
+  ss.splash_screen_loaded = True
+  
+  st.html(img_code)
+  tm.sleep(0.45)
+  st.rerun()
+
 # SCTN: Main code
 
 st.html("""
@@ -948,258 +971,261 @@ st.html("""
                 }
             </style>
         """)    # remove space at top of page
-st.html(htmlstr)
 
-cfg = {}
-col_type_dd = ['Sr.', 'ID', 'Title', 'First Name', 'Surname', 'Full Name', 'Email', 'Address', 'Gender', 'State', 'City', 'Pin', 
-               'Companies', 'Departments', 'Designations', 'Religion', 'Languages', 'Dates', 'Numbers', 'List Options', 
-               'Airlines', 'Pet Types', 'Colours', 'Fixed Value', 'Banks', 'Combine']
+if ss.splash_screen_loaded == False: splash_screen()
+else:
+  st.html(htmlstr)
 
-cfg['Category'] = st.column_config.SelectboxColumn(label='Category', 
+  cfg = {}
+  col_type_dd = ['Sr.', 'ID', 'Title', 'First Name', 'Surname', 'Full Name', 'Email', 'Address', 'Gender', 'State', 'City', 'Pin', 
+                'Companies', 'Departments', 'Designations', 'Religion', 'Languages', 'Dates', 'Numbers', 'List Options', 
+                'Airlines', 'Pet Types', 'Colours', 'Fixed Value', 'Banks', 'Combine']
+
+  cfg['Category'] = st.column_config.SelectboxColumn(label='Category', 
+                                                      default='', 
+                                                      required=True, 
+                                                      options=col_type_dd, 
+                                                      width="small",
+                                                      help='Choose Category from the dropdown list')
+  cfg['Column_Name'] = st.column_config.TextColumn(label='Column Name', 
                                                     default='', 
                                                     required=True, 
-                                                    options=col_type_dd, 
-                                                    width="small",
-                                                    help='Choose Category from the dropdown list')
-cfg['Column_Name'] = st.column_config.TextColumn(label='Column Name', 
-                                                  default='', 
-                                                  required=True, 
-                                                  width="medium",
-                                                  help='Set output Column Name (one word, no special characters)')
-cfg['Limits'] = st.column_config.TextColumn(label='Column Limits', 
-                                                   default='', 
-                                                   width="medium",
-                                                   help=':blue[Lower] and :blue[Upper] column limits are :blue[only] applicable for the Number and the Date column, and, :blue[if specified], must be in the format: :blue[Lower, Upper]. \n\nBoth limits will be ignored if not/partially specified.\n\nDate Limits, if specified, must be in the DD-MM-YYYY format eg. :blue[25-01-2025, 15-12-2026].\n\nNumber Limits, if specified, must be in the integer format eg. :blue[12, 26].')
+                                                    width="medium",
+                                                    help='Set output Column Name (one word, no special characters)')
+  cfg['Limits'] = st.column_config.TextColumn(label='Column Limits', 
+                                                    default='', 
+                                                    width="medium",
+                                                    help=':blue[Lower] and :blue[Upper] column limits are :blue[only] applicable for the Number and the Date column, and, :blue[if specified], must be in the format: :blue[Lower, Upper]. \n\nBoth limits will be ignored if not/partially specified.\n\nDate Limits, if specified, must be in the DD-MM-YYYY format eg. :blue[25-01-2025, 15-12-2026].\n\nNumber Limits, if specified, must be in the integer format eg. :blue[12, 26].')
 
-scm1, scm2 = st.columns(2)
-with scm1:  
-  scmm1, scmm2 = st.columns((9,1))
-  with scmm2.popover(":material/quick_reference:", width='stretch'): st.html(Instructions())
+  scm1, scm2 = st.columns(2)
+  with scm1:  
+    scmm1, scmm2 = st.columns((9,1))
+    with scmm2.popover(":material/quick_reference:", width='stretch'): st.html(Instructions())
 
-  with scmm1.expander(label=":blue[Manage Schema:]", icon=':material/account_tree:', expanded=False):
-    create_load_schema = st.radio('', ('Create Schema', 'Load Schema', 'Sample Schema'), horizontal=True, index=0, label_visibility='collapsed')
-  
-  
-    if create_load_schema == 'Create Schema':
-      stdf = pd.DataFrame(columns=['Category', 'Column_Name', 'Limits'])
-
-      # TODO: to del - 
-      # sdict = {'Category': ['Fixed Value', 'Fixed Value', 'Combine'], 
-      #          'Column_Name': ['SCode', 'TmoCode', 'Merged'], 
-      #          'Limits': ['sku','xyz', 'hyphen, SCode, TmoCode'] }
-      # sdict = {'Category': ['Fixed Value', 'Numbers', 'Combine'], 
-      #          'Column_Name': ['SCode', 'Num', 'Merged'], 
-      #          'Limits': ['sku','1,10', 'hyphen_space, SCode, Num'] }
-      # stdf = pd.DataFrame(sdict)
-
-
-    elif create_load_schema == 'Load Schema':
-      uploaded_file = st.file_uploader('', type=['csv'], accept_multiple_files = False, label_visibility='collapsed')
-      if uploaded_file is not None: 
-        stdf = pd.read_csv(uploaded_file)
-        stdf.fillna('', inplace=True)   # fill nan with ''
-      else: stdf = pd.DataFrame(columns=['Category', 'Column_Name', 'Limits'])
-
-    elif create_load_schema == 'Sample Schema':
-      sdict = {
-                'Category': ['Sr.', 
-                             'ID', 
-                             'Title', 
-                             'First Name', 
-                             'Surname',
-                             'Full Name', 
-                             'Email', 
-                             'Address', 
-                             'Gender', 
-                             'State', 
-                             'City', 
-                             'Pin', 
-                             'Companies', 
-                             'Departments', 
-                             'Designations', 
-                             'Religion', 
-                             'Languages', 
-                             'Dates', 
-                             'Dates', 
-                             'Numbers', 
-                             'List Options', 
-                             'List Options', 
-                             'List Options', 
-                             'Airlines', 
-                             'Pet Types', 
-                             'Fixed Value', 
-                             'Fixed Value', 
-                             'Numbers', 
-                             'Combine',
-                             'Colours', 
-                             'Banks'],
-
-                'Column_Name': ['Sr', 
-                                'ID', 
-                                'Title', 
-                                'FirstName', 
-                                'Surname', 
-                                'FullName', 
-                                'Email', 
-                                'Address', 
-                                'Gender', 
-                                'State', 
-                                'City', 
-                                'Pin', 
-                                'CompanyNames', 
-                                'DepartmentNames', 
-                                'Designations', 
-                                'Religion', 
-                                'Languages', 
-                                'BornOn', 
-                                'VisitedOn', 
-                                'Numbers',
-                                'Boolean', 
-                                'TrueFalse', 
-                                'YNM', 
-                                'AirlineNames', 
-                                'PetTypes', 
-                                'BlankField', 
-                                'FixedValue', 
-                                'CodePostFix',
-                                'MergedCode',
-                                'Colours', 
-                                'BankNames'],
-
-                'Limits': ['',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '',
-                           '01-04-2023, 31-03-2024',
-                           '1276, 5421',
-                           '0, 1',
-                           'True, False',
-                           'Yes, No, Maybe',
-                           '',
-                           '',
-                           '',
-                           'SKU',
-                           '',
-                           'hyphen, FixedValue, CodePostFix',
-                           '',
-                           '']
-              }
-      
-      stdf = pd.DataFrame(sdict)
-
-  st.write(":blue[Schema Detail:]")
-  sdf = st.data_editor(stdf, height=450, column_config=cfg, hide_index=True,  num_rows='dynamic', width='stretch')
-
-with scm2:
-  vis_error, verrormsg = False, ''
-  try:
-    if sdf.shape[0] == 0: vis_error, verrormsg = True, verrormsg + '✋ Schema cannot be empty or blank.<br>'
-    if (sdf['Column_Name'] == '').any(): vis_error, verrormsg = True, verrormsg + '✋ Column Names must cannot be empty.<br>'
-    if (sdf['Column_Name'].duplicated().any()): vis_error, verrormsg = True, verrormsg + '✋ Column Names must be unique.<br>'
-    if (sdf['Column_Name'].str.contains(' ', na=False).any()): vis_error, verrormsg = True, verrormsg + '✋ Column Names cannot have embedded spaces.<br>'
-    if (sdf['Column_Name'].str.contains(repattern, regex=True, na=False).any()): vis_error, verrormsg = True, verrormsg + '✋ Column Names cannot have special characters.<br>'
-  
-    uniq_cols = ['Sr.', 'Title', 'First Name', 'Surname', 'Full Name', 'Email', 'Address', 'Gender', 'State', 'City', 'Pin', 
-                 'Companies', 'Departments', 'Designations', 'Religion', 'Languages', 'Airlines', 'Pet Types', 
-                 'Banks']  # these columns can be twice within the same schema
+    with scmm1.expander(label=":blue[Manage Schema:]", icon=':material/account_tree:', expanded=False):
+      create_load_schema = st.radio('', ('Create Schema', 'Load Schema', 'Sample Schema'), horizontal=True, index=0, label_visibility='collapsed')
     
-    for col_nme in uniq_cols:
-      if int(sdf['Category'].value_counts().get(col_nme, 0)) > 1: vis_error, verrormsg = True, verrormsg + f'✋ There cannot be more than 1 {col_nme} Column.<br>'
-  
-  except: pass
+    
+      if create_load_schema == 'Create Schema':
+        stdf = pd.DataFrame(columns=['Category', 'Column_Name', 'Limits'])
 
-  if not vis_error:
-    rc1, rc2 = st.columns(2)
-    rc1.write('')
-    recs_count = rc2.number_input(label="Number of records to generate:", value=10, format='%d', icon=None, width="stretch")
-    rc1.subheader(":blue[Generated Dataset:]")
+        # TODO: to del - 
+        # sdict = {'Category': ['Fixed Value', 'Fixed Value', 'Combine'], 
+        #          'Column_Name': ['SCode', 'TmoCode', 'Merged'], 
+        #          'Limits': ['sku','xyz', 'hyphen, SCode, TmoCode'] }
+        # sdict = {'Category': ['Fixed Value', 'Numbers', 'Combine'], 
+        #          'Column_Name': ['SCode', 'Num', 'Merged'], 
+        #          'Limits': ['sku','1,10', 'hyphen_space, SCode, Num'] }
+        # stdf = pd.DataFrame(sdict)
 
-    if recs_count > 1:
-      msg = st.toast("Preparing data...",  icon=":material/line_start:")
 
-      cat_lst = list(sdf['Category'])
-      col_list = list(sdf['Column_Name'])
-      limits_list = list(sdf['Limits'])
-      
-      gtdf = pd.DataFrame(columns=col_list)
+      elif create_load_schema == 'Load Schema':
+        uploaded_file = st.file_uploader('', type=['csv'], accept_multiple_files = False, label_visibility='collapsed')
+        if uploaded_file is not None: 
+          stdf = pd.read_csv(uploaded_file)
+          stdf.fillna('', inplace=True)   # fill nan with ''
+        else: stdf = pd.DataFrame(columns=['Category', 'Column_Name', 'Limits'])
 
-      msg.toast("Processing fields...", icon=":material/line_start_diamond:")
-      
-      state_lst, city_lst, pin_lst = GenerateCityStatePin(recs_count, cat_lst)  # get State, City & Pin on basis of city
-      title_lst, gender_lst, firstname_lst, surname_lst, fullname_lst, email_lst = GenerateNameRelatedComponents(recs_count, cat_lst)
+      elif create_load_schema == 'Sample Schema':
+        sdict = {
+                  'Category': ['Sr.', 
+                              'ID', 
+                              'Title', 
+                              'First Name', 
+                              'Surname',
+                              'Full Name', 
+                              'Email', 
+                              'Address', 
+                              'Gender', 
+                              'State', 
+                              'City', 
+                              'Pin', 
+                              'Companies', 
+                              'Departments', 
+                              'Designations', 
+                              'Religion', 
+                              'Languages', 
+                              'Dates', 
+                              'Dates', 
+                              'Numbers', 
+                              'List Options', 
+                              'List Options', 
+                              'List Options', 
+                              'Airlines', 
+                              'Pet Types', 
+                              'Fixed Value', 
+                              'Fixed Value', 
+                              'Numbers', 
+                              'Combine',
+                              'Colours', 
+                              'Banks'],
 
-      combine_col_array = []
-      for _, cat in enumerate(cat_lst):
-        if cat == 'Sr.': gtdf[col_list[_]] = [x+1 for x in range(recs_count)]
-        if cat == 'Companies': gtdf[col_list[_]] = random.choices(CompanyNamesList, k=recs_count)
-        if cat == 'Religion': gtdf[col_list[_]] = random.choices(ReligionNamesList, k=recs_count)
-        if cat == 'Designations': gtdf[col_list[_]] = random.choices(DesignationNamesList, k=recs_count)
-        if cat == 'Departments': gtdf[col_list[_]] = random.choices(DepartmentNamesList, k=recs_count)
-        if cat == 'Languages': gtdf[col_list[_]] = random.choices(LanguageNamesList, k=recs_count)
-        if cat == 'Airlines': gtdf[col_list[_]] = random.choices(AirlineNamesList, k=recs_count)
-        if cat == 'Pet Types': gtdf[col_list[_]] = random.choices(PetCategoryList, k=recs_count)
-        if cat == 'Banks': gtdf[col_list[_]] = random.choices(BankNamesList, k=recs_count)
-        if cat == 'ID': gtdf[col_list[_]] = generate_codes(recs_count)     # 8 char + number
-        if cat == 'Address': gtdf[col_list[_]] = GenerateStreetAddress(recs_count)
-        if cat == 'Fixed Value': gtdf[col_list[_]] = ([''] if limits_list[_] == '' else [limits_list[_].strip()]) * recs_count
-        if cat == 'Colours': gtdf[col_list[_]] = random.choices(ColoursList, k=recs_count)
+                  'Column_Name': ['Sr', 
+                                  'ID', 
+                                  'Title', 
+                                  'FirstName', 
+                                  'Surname', 
+                                  'FullName', 
+                                  'Email', 
+                                  'Address', 
+                                  'Gender', 
+                                  'State', 
+                                  'City', 
+                                  'Pin', 
+                                  'CompanyNames', 
+                                  'DepartmentNames', 
+                                  'Designations', 
+                                  'Religion', 
+                                  'Languages', 
+                                  'BornOn', 
+                                  'VisitedOn', 
+                                  'Numbers',
+                                  'Boolean', 
+                                  'TrueFalse', 
+                                  'YNM', 
+                                  'AirlineNames', 
+                                  'PetTypes', 
+                                  'BlankField', 
+                                  'FixedValue', 
+                                  'CodePostFix',
+                                  'MergedCode',
+                                  'Colours', 
+                                  'BankNames'],
+
+                  'Limits': ['',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '01-04-2023, 31-03-2024',
+                            '1276, 5421',
+                            '0, 1',
+                            'True, False',
+                            'Yes, No, Maybe',
+                            '',
+                            '',
+                            '',
+                            'SKU',
+                            '',
+                            'hyphen, FixedValue, CodePostFix',
+                            '',
+                            '']
+                }
         
-        if cat == 'Combine': 
-          lmts = limits_list[_].strip()
-          lerr, lmsg = False, ''
-          if lmts == '': lerr, lmsg = True, f'No / Invalid Limits provided for {col_list[_]}.'  # no limits provided / invalid limits format 
-          lmts = lmts.split(',')
-          lmts = [x.strip() for x in lmts]
-          if len(lmts) <= 2: 
-            lerr = True
-            lmsg += f'Insufficient Limit parameters provided for {col_list[_]}.'
-          if lmts[0].upper() not in merged_col_separator.keys(): 
-            lerr = True
-            lmsg += f'The first Limit parameter can only be {merged_col_separator.keys()} {col_list[_]}..'
-          if not lerr: combine_col_array.append({'TargetCol': col_list[_], 'Separator': lmts[0], 'SourceCols': lmts[1:]})
-          if lmsg != '': st.toast('✋ ' + lmsg)
+        stdf = pd.DataFrame(sdict)
+
+    st.write(":blue[Schema Detail:]")
+    sdf = st.data_editor(stdf, height=450, column_config=cfg, hide_index=True,  num_rows='dynamic', width='stretch')
+
+  with scm2:
+    vis_error, verrormsg = False, ''
+    try:
+      if sdf.shape[0] == 0: vis_error, verrormsg = True, verrormsg + '✋ Schema cannot be empty or blank.<br>'
+      if (sdf['Column_Name'] == '').any(): vis_error, verrormsg = True, verrormsg + '✋ Column Names must cannot be empty.<br>'
+      if (sdf['Column_Name'].duplicated().any()): vis_error, verrormsg = True, verrormsg + '✋ Column Names must be unique.<br>'
+      if (sdf['Column_Name'].str.contains(' ', na=False).any()): vis_error, verrormsg = True, verrormsg + '✋ Column Names cannot have embedded spaces.<br>'
+      if (sdf['Column_Name'].str.contains(repattern, regex=True, na=False).any()): vis_error, verrormsg = True, verrormsg + '✋ Column Names cannot have special characters.<br>'
+    
+      uniq_cols = ['Sr.', 'Title', 'First Name', 'Surname', 'Full Name', 'Email', 'Address', 'Gender', 'State', 'City', 'Pin', 
+                  'Companies', 'Departments', 'Designations', 'Religion', 'Languages', 'Airlines', 'Pet Types', 
+                  'Banks']  # these columns can be twice within the same schema
+      
+      for col_nme in uniq_cols:
+        if int(sdf['Category'].value_counts().get(col_nme, 0)) > 1: vis_error, verrormsg = True, verrormsg + f'✋ There cannot be more than 1 {col_nme} Column.<br>'
+    
+    except: pass
+
+    if not vis_error:
+      rc1, rc2 = st.columns(2)
+      rc1.write('')
+      recs_count = rc2.number_input(label="Number of records to generate:", value=10, format='%d', icon=None, width="stretch")
+      rc1.subheader(":blue[Generated Dataset:]")
+
+      if recs_count > 1:
+        msg = st.toast("Preparing data...",  icon=":material/line_start:")
+
+        cat_lst = list(sdf['Category'])
+        col_list = list(sdf['Column_Name'])
+        limits_list = list(sdf['Limits'])
+        
+        gtdf = pd.DataFrame(columns=col_list)
+
+        msg.toast("Processing fields...", icon=":material/line_start_diamond:")
+        
+        state_lst, city_lst, pin_lst = GenerateCityStatePin(recs_count, cat_lst)  # get State, City & Pin on basis of city
+        title_lst, gender_lst, firstname_lst, surname_lst, fullname_lst, email_lst = GenerateNameRelatedComponents(recs_count, cat_lst)
+
+        combine_col_array = []
+        for _, cat in enumerate(cat_lst):
+          if cat == 'Sr.': gtdf[col_list[_]] = [x+1 for x in range(recs_count)]
+          if cat == 'Companies': gtdf[col_list[_]] = random.choices(CompanyNamesList, k=recs_count)
+          if cat == 'Religion': gtdf[col_list[_]] = random.choices(ReligionNamesList, k=recs_count)
+          if cat == 'Designations': gtdf[col_list[_]] = random.choices(DesignationNamesList, k=recs_count)
+          if cat == 'Departments': gtdf[col_list[_]] = random.choices(DepartmentNamesList, k=recs_count)
+          if cat == 'Languages': gtdf[col_list[_]] = random.choices(LanguageNamesList, k=recs_count)
+          if cat == 'Airlines': gtdf[col_list[_]] = random.choices(AirlineNamesList, k=recs_count)
+          if cat == 'Pet Types': gtdf[col_list[_]] = random.choices(PetCategoryList, k=recs_count)
+          if cat == 'Banks': gtdf[col_list[_]] = random.choices(BankNamesList, k=recs_count)
+          if cat == 'ID': gtdf[col_list[_]] = generate_codes(recs_count)     # 8 char + number
+          if cat == 'Address': gtdf[col_list[_]] = GenerateStreetAddress(recs_count)
+          if cat == 'Fixed Value': gtdf[col_list[_]] = ([''] if limits_list[_] == '' else [limits_list[_].strip()]) * recs_count
+          if cat == 'Colours': gtdf[col_list[_]] = random.choices(ColoursList, k=recs_count)
           
-        if cat == 'State': gtdf[col_list[_]] = state_lst
-        if cat == 'City': gtdf[col_list[_]] = city_lst
-        if cat == 'Pin': gtdf[col_list[_]] = pin_lst
+          if cat == 'Combine': 
+            lmts = limits_list[_].strip()
+            lerr, lmsg = False, ''
+            if lmts == '': lerr, lmsg = True, f'No / Invalid Limits provided for {col_list[_]}.'  # no limits provided / invalid limits format 
+            lmts = lmts.split(',')
+            lmts = [x.strip() for x in lmts]
+            if len(lmts) <= 2: 
+              lerr = True
+              lmsg += f'Insufficient Limit parameters provided for {col_list[_]}.'
+            if lmts[0].upper() not in merged_col_separator.keys(): 
+              lerr = True
+              lmsg += f'The first Limit parameter can only be {merged_col_separator.keys()} {col_list[_]}..'
+            if not lerr: combine_col_array.append({'TargetCol': col_list[_], 'Separator': lmts[0], 'SourceCols': lmts[1:]})
+            if lmsg != '': st.toast('✋ ' + lmsg)
+            
+          if cat == 'State': gtdf[col_list[_]] = state_lst
+          if cat == 'City': gtdf[col_list[_]] = city_lst
+          if cat == 'Pin': gtdf[col_list[_]] = pin_lst
 
-        if cat == 'Title': gtdf[col_list[_]] = title_lst
-        if cat == 'Gender': gtdf[col_list[_]] = gender_lst
-        if cat == 'First Name': gtdf[col_list[_]] = firstname_lst
-        if cat == 'Surname': gtdf[col_list[_]] = surname_lst
-        if cat == 'Full Name': gtdf[col_list[_]] = fullname_lst
-        if cat == 'Email': gtdf[col_list[_]] = email_lst
-        
-        if cat == 'List Options': 
-          lolst = ValidateListOptions(limits_list[_])
-          if len(lolst) > 0: gtdf[col_list[_]] = random.choices(lolst, k=recs_count)
+          if cat == 'Title': gtdf[col_list[_]] = title_lst
+          if cat == 'Gender': gtdf[col_list[_]] = gender_lst
+          if cat == 'First Name': gtdf[col_list[_]] = firstname_lst
+          if cat == 'Surname': gtdf[col_list[_]] = surname_lst
+          if cat == 'Full Name': gtdf[col_list[_]] = fullname_lst
+          if cat == 'Email': gtdf[col_list[_]] = email_lst
+          
+          if cat == 'List Options': 
+            lolst = ValidateListOptions(limits_list[_])
+            if len(lolst) > 0: gtdf[col_list[_]] = random.choices(lolst, k=recs_count)
 
-        if cat == 'Dates':
-          gtdf[col_list[_]] = GetRandomDate(limits_list[_], recs_count)
-          gtdf[col_list[_]] = pd.to_datetime(gtdf[col_list[_]], dayfirst=True).dt.strftime(date_format)
+          if cat == 'Dates':
+            gtdf[col_list[_]] = GetRandomDate(limits_list[_], recs_count)
+            gtdf[col_list[_]] = pd.to_datetime(gtdf[col_list[_]], dayfirst=True).dt.strftime(date_format)
 
-        if cat == 'Numbers':
-          gtdf[col_list[_]] = GetRandomNumber(limits_list[_], recs_count)
-          gtdf[col_list[_]] = gtdf[col_list[_]].astype(int)
+          if cat == 'Numbers':
+            gtdf[col_list[_]] = GetRandomNumber(limits_list[_], recs_count)
+            gtdf[col_list[_]] = gtdf[col_list[_]].astype(int)
 
-      msg.toast("Dataset complete...", icon=":material/check_box:")
-      if len(combine_col_array) > 0: gtdf = ProcessCombinedFields(combine_col_array, gtdf)
-      if gtdf.shape[0] > 0: st.dataframe(gtdf, hide_index=True, height=463)
+        msg.toast("Dataset complete...", icon=":material/check_box:")
+        if len(combine_col_array) > 0: gtdf = ProcessCombinedFields(combine_col_array, gtdf)
+        if gtdf.shape[0] > 0: st.dataframe(gtdf, hide_index=True, height=463)
 
-  else: st.html("<span style='color: red; font-size:18px;'>Errors:</span><br>" + verrormsg)
+    else: st.html("<span style='color: red; font-size:18px;'>Errors:</span><br>" + verrormsg)
 
-st.html("<br>" + separater_line)
+  st.html("<br>" + separater_line)
